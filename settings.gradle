@@ -1,0 +1,2 @@
+rootProject.name='Chains Larp App'
+include ':app'
