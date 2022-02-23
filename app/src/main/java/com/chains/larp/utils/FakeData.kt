@@ -1,7 +1,7 @@
 package com.chains.larp.utils
 
-import com.chains.larp.domain.models.Character
-import com.chains.larp.domain.models.CharacterFields
+import com.chains.larp.domain.character.Character
+import com.chains.larp.domain.character.CharacterFields
 import com.chains.larp.domain.models.Quest
 import com.chains.larp.domain.models.QuestFields
 import com.chains.larp.ui.views.CharacterViewData
@@ -10,7 +10,7 @@ import com.chains.larp.utils.FakeData.Quests.defaultQuest
 object TestData {
     object Character {
         val satanas = Character(
-            "recrvsO6u87yRjcZR", CharacterFields(
+            "", CharacterFields(
             tagId = 111,
             "Satanás", "Wizard World",
             timeline = emptyList(),

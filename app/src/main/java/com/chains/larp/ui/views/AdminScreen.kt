@@ -13,10 +13,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chains.larp.domain.nfc.AdminUpdateCharacterAction
-import com.chains.larp.domain.nfc.CharacterTagInfo
-import com.chains.larp.domain.nfc.TagNotInRangeException
-import com.chains.larp.domain.nfc.WrongUserIdException
+import com.chains.larp.domain.character.AdminUpdateCharacterAction
+import com.chains.larp.domain.character.TagNotInRangeException
+import com.chains.larp.domain.character.WrongUserIdException
+import com.chains.larp.domain.character.CharacterTagInfo
 import com.chains.larp.ui.components.AppScaffold
 import com.chains.larp.ui.components.ButtonText
 import com.chains.larp.ui.components.Header2Text
@@ -25,7 +25,6 @@ import com.chains.larp.ui.theme.BlueConsole
 import com.chains.larp.ui.theme.ChainsBackgroundGradient
 import com.chains.larp.ui.theme.GreenConsole
 import com.chains.larp.utils.createAppStateSelector
-import com.chains.larp.utils.rememberSelector
 import com.chains.larp.utils.toast
 import com.chains.larp.utils.useStore
 import com.minikorp.duo.select

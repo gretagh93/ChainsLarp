@@ -21,9 +21,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Provides functions to read/write/analyze a MIFARE Classic tag.
  * @author Gerhard Klostermeier
  */
-public class MCReader {
+public class MifareClassicReader {
 
-    private static final String LOG_TAG = MCReader.class.getSimpleName();
+    private static final String LOG_TAG = MifareClassicReader.class.getSimpleName();
     /**
      * Placeholder for not found keys.
      */
@@ -44,7 +44,7 @@ public class MCReader {
      * Initialize a MIFARE Classic reader for the given tag.
      * @param tag The tag to operate on.
      */
-    private MCReader(Tag tag) {
+    private MifareClassicReader(Tag tag) {
         MifareClassic tmpMFC;
         try {
             tmpMFC = MifareClassic.get(tag);
@@ -172,18 +172,18 @@ public class MCReader {
     }
 
     /**
-     * Get new instance of {@link MCReader}.
+     * Get new instance of {@link MifareClassicReader}.
      * If the tag is "null" or if it is not a MIFARE Classic tag, "null"
      * will be returned.
      * @param tag The tag to operate on.
-     * @return {@link MCReader} object or "null" if tag is "null" or tag is
+     * @return {@link MifareClassicReader} object or "null" if tag is "null" or tag is
      * not MIFARE Classic.
      */
-    public static MCReader get(Tag tag) {
-        MCReader mcr = null;
+    public static MifareClassicReader get(Tag tag) {
+        MifareClassicReader mcr = null;
         if (tag != null) {
             try {
-                mcr = new MCReader(tag);
+                mcr = new MifareClassicReader(tag);
                 if (!mcr.isMifareClassic()) {
                     return null;
                 }

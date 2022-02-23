@@ -10,8 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.chains.larp.app.store.AppStore
 import com.chains.larp.domain.DataModule
-import com.chains.larp.domain.auth.AuthState
-import com.chains.larp.domain.nfc.CharacterState
+import com.chains.larp.domain.character.CharacterState
 import com.chains.larp.utils.withStore
 import com.google.accompanist.insets.ProvideWindowInsets
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
@@ -72,10 +71,7 @@ class ChainsApplication : Application(), DIAware {
  * Application State. Stored by [AppStore].
  */
 @State
-data class AppState(
-    val auth: AuthState = AuthState(),
-    val character: CharacterState = CharacterState()
-)
+data class AppState(val character: CharacterState = CharacterState())
 
 /**
  * Bootstrap action throw when the app passes the splash. It would suspend until all the side effects for the

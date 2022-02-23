@@ -6,12 +6,13 @@ import android.nfc.tech.MifareClassic
 import android.nfc.tech.Ndef
 import android.nfc.tech.NdefFormatable
 import android.util.Log
+import com.chains.larp.domain.character.CharacterTagInfo
 import com.chains.larp.utils.ByteUtils
 import com.minikorp.grove.Grove
 import java.io.IOException
 import java.util.*
 
-class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
+class GenericNfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
     private val NDEF = Ndef::class.java.canonicalName
     private val NDEF_FORMATABLE = NdefFormatable::class.java.canonicalName
     private val MIFARE = MifareClassic::class.java.canonicalName
@@ -19,16 +20,6 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
     private val ndef: Ndef?
     private val ndefFormatable: NdefFormatable?
     private val mifareClassic: MifareClassic?
-
-    val tagId: String?
-        get() {
-            if (ndef != null) {
-                return bytesToHexString(ndef.tag.id)
-            } else if (ndefFormatable != null) {
-                return bytesToHexString(ndefFormatable.tag.id)
-            }
-            return null
-        }
 
     init {
         val technologies = tag.techList
@@ -57,6 +48,21 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
         }
     }
 
+    /**
+     * Reads the data of an Chains NFC. This must be a Mifare classic NFC to work with the app.
+     * The process is simple:
+     * - Connect to the Tag
+     * - Read ONLY the first block.
+     * - Authenticate with the block and if success move on
+     * - We make use only of the first 3 sectors of the first block(All sectors have 16bits)
+     * -- 1º sector is skipped because it include Tag header related data
+     * -- 2º sector contains 16 digits on hexadecimal format:
+     * --- First 7 digits are the IDRFID
+     * --- Next 5 are the seed ID
+     * --- Last 4 are the game ID
+     *
+     * -- 3º sector contains the archetypes of the character on binary format. They come has a list of [UInt] values
+     */
     fun readData(): CharacterTagInfo? {
         if (mifareClassic == null) return null
         try {
@@ -65,22 +71,22 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
             var gameId = ""
             var archetypesList = emptyList<UInt>()
 
-            //Variables
+            //Variables -- Not needed for now because we only write on the first sector
             val sectorCount: Int = mifareClassic.sectorCount
             val tagSize: Int = mifareClassic.size
+
             //Keys
             var defaultKeys: ByteArray? = byteArrayOf()
             defaultKeys = MifareClassic.KEY_DEFAULT
-            var values: String = ""
+
             //Connecting to tag
             mifareClassic.connect()
             for (sectorIndex in 0 until 1) { //We only use the first sector
                 val auth = mifareClassic.authenticateSectorWithKeyA(sectorIndex, defaultKeys)
                 if (auth) {
-                    val sectorBlockCount = mifareClassic.getBlockCountInSector(sectorIndex)
                     // Read the block
-                    // Skip first which is the header
-                    // Seconds line of first block would be the character ID
+                    val sectorBlockCount = mifareClassic.getBlockCountInSector(sectorIndex)
+
                     // Third would be the arqueotipes
 
                     val firstBlockIndex: Int = mifareClassic.sectorToBlock(sectorIndex)
@@ -124,26 +130,44 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
         }
     }
 
+    /**
+     * Writes the data of a Character on a Chains NFC. This must be a Mifare classic NFC to work with the app.
+     * The process is simple:
+     * - Connect to the Tag
+     * - Write ONLY the first block.
+     * - Authenticate with the block and if success move on
+     * - We make use only of the first 3 sectors of the first block(All sectors have 16bits)
+     * -- 1º sector is skipped because it include Tag header related data
+     * -- 2º sector contains 16 digits on hexadecimal format:
+     * --- First 7 digits are the IDRFID
+     * --- Next 5 are the seed ID
+     * --- Last 4 are the game ID
+     * --- We concatenate the needed data from [CharacterTagInfo] and write it as a [ByteArray]
+     *
+     * -- 3º sector contains the archetypes of the character on binary format. They are write has a list of [UInt] values
+     *
+     * @param override Only used to override the full tag. This must only be use from the admin screen to write down empty tags before a game.
+     */
     @Throws(IOException::class, FormatException::class)
-    fun writeData(tagInfo: CharacterTagInfo, override: Boolean = false): Boolean {
+    fun writeData(tagInfo: CharacterTagInfo,
+                  override: Boolean = false): Boolean {
         if (mifareClassic == null) return false
         try {
-            //Variables
+
+            //Variables -- No needed because we only make use of the first block
             val sectorCount: Int = mifareClassic.sectorCount
             val tagSize: Int = mifareClassic.size
+
             //Keys
             var defaultKeys: ByteArray? = byteArrayOf()
             defaultKeys = MifareClassic.KEY_DEFAULT
+
             //Connecting to tag
             mifareClassic.connect()
             for (sectorIndex in 0 until 1) { //We only use the first sector
                 val auth = mifareClassic.authenticateSectorWithKeyA(sectorIndex, defaultKeys)
                 if (auth) {
                     val sectorBlockCount = mifareClassic.getBlockCountInSector(sectorIndex)
-                    // Read the block
-                    // Skip first which is the header
-                    // Seconds line of first block would be the character ID
-                    // Third would be the arqueotipes
 
                     val firstBlockIndex: Int = mifareClassic.sectorToBlock(sectorIndex)
                     val lastBlockIndex = firstBlockIndex.plus(sectorBlockCount)
@@ -153,7 +177,6 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
                         if (sectorBlockIndex == 1 && override) { //Only write ID, seed and game if override
                             val mergeString = tagInfo.characterId + tagInfo.seedId + tagInfo.gameId
                             mifareClassic.writeBlock(sectorBlockIndex, mergeString.toByteArray())
-                            //Add 0s ?
                         }
                         if (sectorBlockIndex == 2) {
                             val archetypeByteArray = ByteArray(16)
@@ -171,25 +194,12 @@ class NfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
             Grove.e(e) { "There was an error writting the tag" }
             return false
         } finally {
-            mifareClassic.close()
+            close()
         }
     }
 
     @Throws(IOException::class)
     private fun close() {
-        ndef?.close() ?: ndefFormatable?.close()
-    }
-
-    companion object {
-        fun bytesToHexString(src: ByteArray): String? {
-            if (ByteUtils.isNullOrEmpty(src)) {
-                return null
-            }
-            val sb = StringBuilder()
-            for (b in src) {
-                sb.append(String.format("%02X", b))
-            }
-            return sb.toString()
-        }
+        ndef?.close() ?: ndefFormatable?.close() ?: mifareClassic?.close()
     }
 }

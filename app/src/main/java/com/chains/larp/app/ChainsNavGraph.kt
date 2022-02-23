@@ -7,7 +7,6 @@ import androidx.compose.material.ScaffoldState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.navArgument
@@ -57,12 +56,14 @@ fun ChainsNavGraph(
             AdminScreen(scaffoldState)
         }
         composable(
-            route = "${MainDestinations.CHARACTER_ROUTE}?characterId={characterId}",
+            route = "${MainDestinations.CHARACTER_ROUTE}?characterId={characterId}&tagId={tagId}",
             arguments = listOf(
-                navArgument("characterId") { type = NavType.StringType }
+                navArgument("characterId") { type = NavType.StringType },
+                navArgument("tagId") { type = NavType.StringType }
             )) {
             val characterId = it.arguments!!.getString("characterId")!!
-            CharacterScreen(characterId, actions.navigateToScanning, scaffoldState)
+            val tagId = it.arguments!!.getString("tagId")!!
+            CharacterScreen(characterId, tagId, actions.navigateToScanning, scaffoldState)
         }
         //Debug
         composable(MainDestinations.DEBUG_ROUTE) { DebugScreen() }
@@ -81,8 +82,8 @@ class MainActions(navController: NavHostController) {
         navController.navigate(MainDestinations.ADMIN_ROUTE)
     }
 
-    val navigateToCharacter: (String) -> Unit = {
-        navController.navigate("${MainDestinations.CHARACTER_ROUTE}?characterId=$it")
+    val navigateToCharacter: (String, String) -> Unit = { characterId, tagId ->
+        navController.navigate("${MainDestinations.CHARACTER_ROUTE}?characterId=$characterId&tagId=$tagId")
     }
 
     val navigateToScanning: () -> Unit = {

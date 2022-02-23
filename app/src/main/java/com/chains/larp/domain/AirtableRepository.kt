@@ -1,42 +1,54 @@
 package com.chains.larp.domain
 
-import com.chains.larp.domain.auth.models.Player
-import com.chains.larp.domain.models.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import com.chains.larp.domain.character.Character
+import com.chains.larp.domain.character.CharacterFields
+import com.chains.larp.domain.character.CharacterUpdateRecord
+import com.chains.larp.domain.models.Quest
+import com.chains.larp.domain.models.QuestFields
+import com.chains.larp.domain.models.QuestUpdateFields
+import com.chains.larp.domain.models.QuestUpdateRecord
+import com.minikorp.grove.Grove
 
-class AirtableRepository(private val api: AirtableApi) : CoroutineScope by CoroutineScope(Job()) {
+interface AirtableRepository {
+    /**
+     * Retrieves a Character from the repository based on the given ID.
+     */
+    suspend fun fetchCharacter(id: String): Character
+
+    /**
+     * Updates both, the character fields and quest data on the NFC and if success on the repository.
+     */
+    suspend fun updateCharacter(id: String, fields: CharacterFields, completedQuests: Map<String, QuestFields>)
+
+    /**
+     * Fetches all quests.
+     */
+    suspend fun fetchCharacterQuests(characterId: String): List<Quest>
+}
+
+class AirtableRepositoryImpl(private val api: AirtableApi) : AirtableRepository {
 
     companion object {
-        private const val AIRTABLE_BASE_ID = "appKmqcWDJjiyYfwX"
+        private const val AIRTABLE_BASE_ID = "YOUR ID"
     }
 
-    suspend fun fetchUser(id: String, characterType: String = "Pjs"): Character {
-        val character =
-            api.getPlayer(baseId = AIRTABLE_BASE_ID, filter = "{IDRFID}=$id").records.firstOrNull()
+    override suspend fun fetchCharacter(id: String): Character {
+        val isIdrfid = id.length == 7
+        Grove.d { "Fetching by IDRFID: $isIdrfid" }
+        val character = if (isIdrfid) api.filterCharacter(baseId = AIRTABLE_BASE_ID, filter = "{IDRFID}=$id").records.firstOrNull()
+        else api.getCharacter(baseId = AIRTABLE_BASE_ID, characterId = id)
+
         if (character == null) throw NullPointerException()
         else return character
     }
 
-    suspend fun updateUser(id: String, fields: CharacterFields, completedQuests: Map<String, QuestFields>) {
-        api.updatePlayer(baseId = AIRTABLE_BASE_ID, id, CharacterUpdateRecord(fields))
+    override suspend fun updateCharacter(id: String, fields: CharacterFields, completedQuests: Map<String, QuestFields>) {
+        api.updateCharacter(baseId = AIRTABLE_BASE_ID, id, CharacterUpdateRecord(fields))
         completedQuests.forEach { (questId, fields) ->
-            api.updateQuest(
-                baseId = AIRTABLE_BASE_ID,
-                questId,
-                QuestUpdateRecord(QuestUpdateFields(fields.completed))
-            )
+            api.updateQuest(AIRTABLE_BASE_ID, questId, QuestUpdateRecord(QuestUpdateFields(fields.completed)))
         }
     }
 
-    suspend fun fetchQuests(): List<Quest> = api.getQuests(AIRTABLE_BASE_ID).records
-
-    suspend fun loginUser(username: String, password: String): Player =
-        api.login(
-            baseId = AIRTABLE_BASE_ID,
-            filterByFormula = "AND({User} = '$username' {Pwd} = '$password')"
-        ).records.firstOrNull() ?: throw LoginException()
+    override suspend fun fetchCharacterQuests(characterId: String): List<Quest> =
+        api.fetchCharacterQuests(AIRTABLE_BASE_ID, filter = "FIND('${characterId.toInt()}', {IDRFID})").records.sortedBy { it.fields.name }
 }
-
-class LoginException : Exception()
-class CharacterNotFound(id: String) : Exception()

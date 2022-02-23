@@ -63,50 +63,5 @@ class ByteUtils {
             }
             return data
         }
-
-        /**
-         * Convert a hex string to ASCII string.
-         * @param hex Hex string to convert.
-         * @return Converted ASCII string. Null on error.
-         */
-        fun hex2Ascii(hex: String?): String? {
-            if (!(hex != null && hex.length % 2 == 0 && hex.matches(Regex.fromLiteral("[0-9A-Fa-f]+")))
-            ) {
-                return null
-            }
-            val bytes = hex2ByteArray(hex)
-            var ret: String? = null
-            // Replace non printable ASCII with ".".
-            for (i in bytes!!.indices) {
-                if (bytes[i] < 0x20.toByte() || bytes[i] == 0x7F.toByte()) {
-                    bytes[i] = 0x2E.toByte()
-                }
-            }
-            // Hex to ASCII.
-            try {
-                ret = String(bytes, Charsets.US_ASCII)
-            } catch (e: UnsupportedEncodingException) {
-                Log.e("ByteUtils", "Error while encoding to ASCII", e)
-            }
-            return ret
-        }
-
-        /**
-         * Convert a ASCII string to a hex string.
-         * @param ascii ASCII string to convert.
-         * @return Converted hex string.
-         */
-        fun ascii2Hex(ascii: String?): String? {
-            if (!(ascii != null && ascii != "")) {
-                return null
-            }
-            val chars = ascii.toCharArray()
-            val hex = java.lang.StringBuilder()
-            for (aChar in chars) {
-                hex.append(String.format("%02X", aChar.toInt()))
-            }
-            return hex.toString()
-        }
-
     }
 }

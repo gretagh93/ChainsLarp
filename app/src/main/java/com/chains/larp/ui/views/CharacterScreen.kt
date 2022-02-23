@@ -1,5 +1,6 @@
 package com.chains.larp.ui.views
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,8 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chains.larp.R
-import com.chains.larp.domain.models.Character
-import com.chains.larp.domain.models.CharacterFields
+import com.chains.larp.domain.character.*
 import com.chains.larp.domain.models.Quest
 import com.chains.larp.domain.models.QuestFields
 import com.chains.larp.domain.nfc.*
@@ -67,6 +67,7 @@ data class CharacterViewData(
 @Composable
 fun CharacterScreen(
     characterId: String,
+    tagId: String,
     onBack: () -> Unit,
     scaffoldState: ScaffoldState = rememberScaffoldState()
 ) {
@@ -78,13 +79,21 @@ fun CharacterScreen(
     val onRefresh = {
         scope.launch {
             store.dispatch(LoadCharacterAction.Request(characterId))
-            store.dispatch(LoadQuestsAction.Request)
+            store.dispatch(LoadQuestsAction.Request(tagId))
         }
     }
+
     //Data came from NFT and it has priority over backend, so no refresh
     LaunchedEffect(characterId) {
-        if (selector.getOrNull() == null)
-            onRefresh()
+        if (selector.isEmpty) onRefresh()
+    }
+
+    //Override onBack
+    BackHandler {
+        scope.launch {
+            store.dispatch(ResetCharacterAction)
+            onBack()
+        }
     }
 
     withLocalLoadingState(!selector.isTerminate) {
@@ -100,13 +109,13 @@ fun CharacterScreen(
                     .select { it.character.updateCharacter }
                     .onEach { updateResource ->
                         if (updateResource.isSuccess) {
-                            toast(text = "Character ${selector.getOrNull()?.character?.fields?.name}")
+                            toast(text = "Character ${selector.getOrNull()?.character?.fields?.name} Updated")
                             onBack()
                         } else if (updateResource.isFailure) {
                             updateResource.exceptionOrNull()?.let { error ->
                                 when (error) {
                                     WrongUserIdException -> toast("The tag id doesn't match the actual character")
-                                    TagNotInRangeException -> toast("The tag is not in range for writting")
+                                    TagNotInRangeException -> toast("The tag is not in range for writing")
                                     else -> toast("There was an error writing the character. Try again")
                                 }
                             }
@@ -217,10 +226,10 @@ private fun CharacterScreenContent(
                         quest.fields.name,
                         quest.fields.notes,
                         questsToUpdate.value[quest.id]?.completed
-                        ?: characterViewData.associatedQuests.firstOrNull{ it.id == quest.id}?.fields?.completed
+                        ?: characterViewData.associatedQuests.firstOrNull { it.id == quest.id }?.fields?.completed
                         ?: false
                     ) {
-                        val questValue = questsToUpdate.value[quest.id] ?: characterViewData.associatedQuests.firstOrNull{ it.id == quest.id}?.fields
+                        val questValue = questsToUpdate.value[quest.id] ?: characterViewData.associatedQuests.firstOrNull { it.id == quest.id }?.fields
                         val isCompleted = !(questValue?.completed ?: false)
                         questsToUpdate.value = questsToUpdate.value.apply { this[quest.id] = quest.fields.copy(completed = isCompleted) }
                         Grove.i { "Current quests to update: ${questsToUpdate.value}" }

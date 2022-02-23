@@ -11,8 +11,8 @@ import androidx.activity.compose.setContent
 import com.chains.larp.app.ChainsApp
 import com.chains.larp.app.appContext
 import com.chains.larp.app.store.AppStore
-import com.chains.larp.domain.nfc.ManageNfcReaderState
-import com.chains.larp.domain.nfc.ReadCharacterMedalAction
+import com.chains.larp.domain.character.ManageNfcReaderState
+import com.chains.larp.domain.character.ReadCharacterMedalAction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -5,10 +5,19 @@ import com.chains.larp.domain.AirtableRecordResponse
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+/**
+ * Quest body format for Airtable @PATCH calls.
+ */
 data class QuestUpdateRecord(val fields: QuestUpdateFields)
 
+/**
+ * Quest params to me modify on the @PATCH call.
+ */
 data class QuestUpdateFields(val Done: Boolean)
 
+/**
+ * Quest Airtable model.
+ */
 data class QuestFields(
     @field:Json(name = "Name") val name: String,
     @field:Json(name = "Notes") val notes: String,

@@ -19,9 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chains.larp.domain.models.Character
-import com.chains.larp.domain.nfc.LoadCharacterAction
-import com.chains.larp.domain.nfc.TagNotInRangeException
+import com.chains.larp.domain.character.Character
+import com.chains.larp.domain.character.LoadCharacterAction
+import com.chains.larp.domain.character.TagNotInRangeException
 import com.chains.larp.ui.components.AppScaffold
 import com.chains.larp.ui.components.Header2Text
 import com.chains.larp.ui.theme.BlueConsole
@@ -29,6 +29,7 @@ import com.chains.larp.ui.theme.ChainsBackgroundGradient
 import com.chains.larp.utils.*
 import com.minikorp.duo.Resource
 import com.minikorp.duo.select
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -39,7 +40,7 @@ private val loadedCharacterSelector =
 
 @Composable
 fun ScanningScreen(
-    navigateToCharacterScreen: (String) -> Unit,
+    navigateToCharacterScreen: (String, String) -> Unit,
     navigateToAdmin: () -> Unit = {},
     scaffoldState: ScaffoldState = rememberScaffoldState()
 ) {
@@ -50,17 +51,17 @@ fun ScanningScreen(
 
     if (tagSelector.isSuccess) {
         //Update database and only after success navigate
-        val characterId = tagSelector.getResourceValue()!!.characterId
-        LaunchedEffect(characterId) {
-            store.dispatch(LoadCharacterAction.Request(characterId))
+        val characterTagId = tagSelector.getResourceValue()!!.characterId
+        LaunchedEffect(characterTagId) {
+            store.dispatch(LoadCharacterAction.Request(characterTagId))
 
             store.flow
                 .select { it.character.loadCharacter }
+                .filter { it.isTerminate }
                 .onEach { characterResource ->
                     if (characterResource.isSuccess) {
-                        val characterSelectorId = characterResource.getResourceValue()!!.id
-                        navigateToCharacterScreen(characterSelectorId)
-
+                        val character = characterResource.getResourceValue()!!
+                        navigateToCharacterScreen(character.id, character.fields.tagId.toString())
                     } else if (characterResource.isFailure) {
                         toast("There was an error loading the character for the given tag")
                     }

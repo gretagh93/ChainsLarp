@@ -14,9 +14,13 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 private const val AUTHORIZATION = "Authorization"
 private const val AIRTABLE_BASE_URL = "https://api.airtable.com/"
-private const val AIRTABLE_API_KEY = "keyqPFYrbV1XdgN3e"
+private const val AIRTABLE_API_KEY = "YOUR KEY"
 
+/**
+ * Initializates all the data related logic of the app.
+ */
 object DataModule {
+
     fun create() = DI.Module("DataModule") {
         bind<Moshi>() with singleton { Moshi.Builder().build() }
         bind<Retrofit>() with singleton {
@@ -33,13 +37,13 @@ object DataModule {
         }
 
         bind<OkHttpClient>() with singleton { prepareOkHttpClient() }
-        bind<AirtableRepository>() with singleton { AirtableRepository(instance()) }
+        bind<AirtableRepository>() with singleton { AirtableRepositoryImpl(instance()) }
     }
 
     private fun prepareOkHttpClient(): OkHttpClient {
-        val interceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
+        val debugInterceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
             override fun log(message: String) {
-                Grove.d{message}
+                Grove.d { message }
             }
         }).setLevel(if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
         else HttpLoggingInterceptor.Level.NONE)
@@ -53,7 +57,7 @@ object DataModule {
             }
         })
         return baseOkHttpBuilder
-            .addInterceptor(interceptor)
+            .addInterceptor(debugInterceptor)
             .build()
     }
 }

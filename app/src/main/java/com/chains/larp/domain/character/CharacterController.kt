@@ -1,4 +1,4 @@
-package com.chains.larp.domain.nfc
+package com.chains.larp.domain.character
 
 import android.app.Activity
 import android.app.PendingIntent
@@ -7,12 +7,11 @@ import android.content.Intent
 import android.nfc.NfcManager
 import com.chains.larp.app.appContext
 import com.chains.larp.domain.AirtableRepository
-import com.chains.larp.domain.auth.AuthController
-import com.chains.larp.domain.models.*
+import com.chains.larp.domain.models.Quest
+import com.chains.larp.domain.models.QuestFields
+import com.chains.larp.domain.nfc.GenericNfcTag
 import com.minikorp.grove.Grove
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 
 data class CharacterTagInfo(
@@ -22,56 +21,49 @@ data class CharacterTagInfo(
     val archetypes: List<UInt> = emptyList()
 )
 
-typealias CharacterTagRef = Pair<String, NfcTag>
+typealias CharacterTagRef = Pair<String, GenericNfcTag>
 
 data class NfcState(val isEnabled: Boolean = false)
 
 interface CharacterController {
 
-    suspend fun readCharacterTag(tag: NfcTag): Result<CharacterTagInfo>
+    suspend fun readCharacterTag(tag: GenericNfcTag): Result<CharacterTagInfo>
 
     suspend fun loadCharacterData(characterId: String): Result<Character>
 
-    suspend fun updateCharacterData(
-        characterId: String,
-        characterFields: CharacterFields,
-        updatedQuests: Map<String, QuestFields>,
-        currentReadingTag: NfcTag
-    ): Result<Unit>
+    suspend fun updateCharacterData(characterId: String,
+                                    characterFields: CharacterFields,
+                                    updatedQuests: Map<String, QuestFields>,
+                                    currentReadingTag: GenericNfcTag): Result<Unit>
 
-    fun enableCharacterNfcReader(enable: Boolean, activity: Activity): Result<NfcState>
+    fun enableCharacterNfcReader(enable: Boolean,
+                                 activity: Activity): Result<NfcState>
 
-    suspend fun loadQuests(): Result<List<Quest>>
+    suspend fun loadCharacterQuests(characterId: String): Result<List<Quest>>
 
-    fun writeCharacterTag(
-        characterId: String,
-        fields: CharacterFields,
-        tag: NfcTag
-    ): Boolean
+    fun writeCharacterTag(characterId: String,
+                          fields: CharacterFields,
+                          tag: GenericNfcTag): Boolean
 
-    suspend fun overrideCharacterTag(
-        tagInfo: CharacterTagInfo,
-        tag: NfcTag
-    ): Result<Unit>
+    suspend fun overrideCharacterTag(tagInfo: CharacterTagInfo,
+                                     tag: GenericNfcTag): Result<Unit>
 }
 
 /**
- * Implementation of [AuthController] backed by Firebase and subscriptions API.
+ * Implementation of [CharacterController].
  */
-class CharacterControllerImpl(private val repository: AirtableRepository) :
-    CharacterController {
-
-    private val scope = CoroutineScope(Job())
+class CharacterControllerImpl(private val repository: AirtableRepository) : CharacterController {
     private val nfcManager = appContext.getSystemService(Context.NFC_SERVICE) as NfcManager
 
-    override suspend fun loadQuests(): Result<List<Quest>> =
+   override suspend fun loadCharacterQuests(characterId: String): Result<List<Quest>> =
         withContext(Dispatchers.IO) {
             runCatching {
-                repository.fetchQuests()
+                Grove.d{"Fetching quests for character: $characterId"}
+                repository.fetchCharacterQuests(characterId)
             }
         }
 
-    override suspend fun readCharacterTag(tag: NfcTag): Result<CharacterTagInfo> {
+    override suspend fun readCharacterTag(tag: GenericNfcTag): Result<CharacterTagInfo> {
         val data = tag.readData()
         Grove.e { "Current readed tag: $data" }
         return if (data != null) {
@@ -113,40 +105,36 @@ class CharacterControllerImpl(private val repository: AirtableRepository) :
         withContext(Dispatchers.IO) {
             runCatching {
                 Grove.e { "Retrieve Character for user id $characterId" }
-                val character = repository.fetchUser(characterId)
+                val character = repository.fetchCharacter(characterId)
                 Grove.e { " Character is is $character" }
                 character
             }
         }
 
-    override suspend fun updateCharacterData(
-        characterId: String,
-        characterFields: CharacterFields,
-        updatedQuests: Map<String, QuestFields>,
-        currentReadingTag: NfcTag
-    ): Result<Unit> =
+    override suspend fun updateCharacterData(characterId: String,
+                                             characterFields: CharacterFields,
+                                             updatedQuests: Map<String, QuestFields>,
+                                             currentReadingTag: GenericNfcTag): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 Grove.i { "Trying to write NFC for $characterId" }
                 val questMergedCharacterFields = characterFields.mergeWithQuestArchetypes(updatedQuests.values.toList())
                 if (writeCharacterTag(characterId, questMergedCharacterFields, currentReadingTag)) {
-                    repository.updateUser(characterId, questMergedCharacterFields, updatedQuests)
+                    repository.updateCharacter(characterId, questMergedCharacterFields, updatedQuests)
                 } else {
                     throw TagNotInRangeException
                 }
             }
         }
 
-    override fun writeCharacterTag(
-        characterId: String,
-        fields: CharacterFields,
-        tag: NfcTag
-    ): Boolean {
+    override fun writeCharacterTag(characterId: String,
+                                   fields: CharacterFields,
+                                   tag: GenericNfcTag): Boolean {
         val nfcCharacterTagInfo = CharacterTagInfo(characterId, archetypes = fields.toArchetypesIntList().map { it.toUInt() })
         return tag.writeData(nfcCharacterTagInfo, false)
     }
 
-    override suspend fun overrideCharacterTag(tagInfo: CharacterTagInfo, tag: NfcTag): Result<Unit> =
+    override suspend fun overrideCharacterTag(tagInfo: CharacterTagInfo, tag: GenericNfcTag): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 if (!tag.writeData(tagInfo, true)) {

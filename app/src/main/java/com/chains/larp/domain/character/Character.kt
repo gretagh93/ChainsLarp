@@ -1,11 +1,18 @@
-package com.chains.larp.domain.models
+package com.chains.larp.domain.character
 
 import com.chains.larp.domain.AirtableRecord
 import com.chains.larp.domain.AirtableRecordResponse
+import com.chains.larp.domain.models.QuestFields
 import com.squareup.moshi.Json
 
+/**
+ * Character body format for Airtable @PATCH calls.
+ */
 data class CharacterUpdateRecord(val fields: CharacterFields)
 
+/**
+ * Character Airtable model.
+ */
 data class CharacterFields(
     @field:Json(name = "IDRFID") val tagId: Int,
     @field:Json(name = "Name") val name: String,

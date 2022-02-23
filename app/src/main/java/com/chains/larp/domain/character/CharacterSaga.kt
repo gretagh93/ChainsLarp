@@ -1,10 +1,8 @@
-package com.chains.larp.domain.nfc
+package com.chains.larp.domain.character
 
-import com.chains.larp.app.BootstrapAction
 import com.chains.larp.app.store.BaseSaga
-import com.chains.larp.domain.auth.LogoutAction
-import com.chains.larp.domain.models.Character
 import com.chains.larp.domain.models.Quest
+import com.chains.larp.domain.nfc.*
 import com.minikorp.duo.*
 import com.minikorp.grove.Grove
 import org.kodein.di.DI
@@ -27,22 +25,13 @@ class CharacterSaga(di: DI) : BaseSaga<CharacterState>(di) {
     private val controller: CharacterController by instance()
 
     @TypedHandler.Fun
-    suspend fun bootstrap(context: DispatchContext<CharacterState>, action: BootstrapAction) {
-        controller.loadQuests()
-            .onSuccess { context.reduce { state -> state.copy(quests = Resource.success(it)) } }
-            .onFailure { context.reduce { state -> state.copy(quests = Resource.failure(it)) } }
-        //Test value
-        //context.reduce { it.copy(scanningMedal = Resource.success(TestData.Character.satanas)) }
-    }
-
-    @TypedHandler.Fun
     suspend fun handleReadCharacterMedal(
         context: DispatchContext<CharacterState>,
         action: ReadCharacterMedalAction.Request
     ) {
         if (action.medalTag == null) return //TODO control error
 
-        val nfcTag = NfcTag(action.medalTag)
+        val nfcTag = GenericNfcTag(action.medalTag)
         context.reduce { it.copy(scanningMedal = Resource.loading()) }
         controller.readCharacterTag(nfcTag)
             .onSuccess {
@@ -62,6 +51,7 @@ class CharacterSaga(di: DI) : BaseSaga<CharacterState>(di) {
         action: LoadCharacterAction.Request
     ) {
         context.reduce { it.copy(loadCharacter = Resource.loading()) }
+
         controller.loadCharacterData(action.characterId)
             .onSuccess { context.reduce { state -> state.copy(loadCharacter = Resource.success(it)) } }
             .onFailure { context.reduce { state -> state.copy(loadCharacter = Resource.failure(it)) } }
@@ -122,9 +112,14 @@ class CharacterSaga(di: DI) : BaseSaga<CharacterState>(di) {
         action: LoadQuestsAction.Request
     ) {
         context.reduce { it.copy(quests = Resource.loading()) }
-        controller.loadQuests()
+        controller.loadCharacterQuests(action.characterId)
             .onSuccess { context.reduce { state -> state.copy(quests = Resource.success(it)) } }
             .onFailure { context.reduce { state -> state.copy(quests = Resource.failure(it)) } }
+    }
+
+    @TypedHandler.Fun
+    suspend fun handleReset(context: DispatchContext<CharacterState>, action: ResetCharacterAction) {
+        context.reduce { CharacterState() }
     }
 
     @TypedHandler.Fun
@@ -136,11 +131,6 @@ class CharacterSaga(di: DI) : BaseSaga<CharacterState>(di) {
         controller.enableCharacterNfcReader(action.enable, action.activity)
             .onSuccess { state -> context.reduce { it.copy(nfcState = Resource.success(state)) } }
             .onFailure { error -> context.reduce { it.copy(nfcState = Resource.failure(error)) } }
-    }
-
-    @TypedHandler.Fun
-    suspend fun logout(context: DispatchContext<CharacterState>, action: LogoutAction) {
-        context.reduce { CharacterState() }
     }
 
     @TypedHandler.Root
