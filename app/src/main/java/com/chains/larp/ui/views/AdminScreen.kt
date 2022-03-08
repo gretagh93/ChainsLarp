@@ -33,8 +33,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 const val MAX_IDRFID_LENGHT = 7
-const val MAX_SEED_LENGHT = 5
-const val MAX_GAME_LENGHT = 4
+const val MAX_SEED_LENGHT = 4
+const val MAX_GAME_LENGHT = 5
 
 val adminUpdateCharacterSelector =
     createAppStateSelector(p1 = { it.character }, selector = { state -> state.adminTagUpdate })

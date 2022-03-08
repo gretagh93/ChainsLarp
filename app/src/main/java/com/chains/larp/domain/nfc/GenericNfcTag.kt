@@ -58,8 +58,8 @@ class GenericNfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
      * -- 1º sector is skipped because it include Tag header related data
      * -- 2º sector contains 16 digits on hexadecimal format:
      * --- First 7 digits are the IDRFID
-     * --- Next 5 are the seed ID
-     * --- Last 4 are the game ID
+     * --- Next 5 are the game ID
+     * --- Last 4 are the seed ID
      *
      * -- 3º sector contains the archetypes of the character on binary format. They come has a list of [UInt] values
      */
@@ -99,9 +99,9 @@ class GenericNfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
                             if (!ByteUtils.isNullOrEmpty(block) && block.size >= 15) {
                                 Grove.e { "Block is not empty" }
                                 characterId = String(block.slice(0..6).toByteArray()) //SSDIF
-                                seedId = String(block.slice(7..11).toByteArray())
-                                gameId = String(block.slice(12..15).toByteArray())
-                                Grove.e { "First block character values : ID $characterId, seed: $seedId, game: $gameId" }
+                                gameId = String(block.slice(7..11).toByteArray())
+                                seedId = String(block.slice(12..15).toByteArray())
+                                Grove.e { "First block character values : ID $characterId, game: $gameId, Seed: $seedId" }
                             } else {
                                 Grove.e { "Expected character ids but got nothing" }
                             }
@@ -140,8 +140,8 @@ class GenericNfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
      * -- 1º sector is skipped because it include Tag header related data
      * -- 2º sector contains 16 digits on hexadecimal format:
      * --- First 7 digits are the IDRFID
-     * --- Next 5 are the seed ID
-     * --- Last 4 are the game ID
+     * --- Next 4 are the game ID
+     * --- Last 5 are the seed ID
      * --- We concatenate the needed data from [CharacterTagInfo] and write it as a [ByteArray]
      *
      * -- 3º sector contains the archetypes of the character on binary format. They are write has a list of [UInt] values
@@ -175,7 +175,7 @@ class GenericNfcTag @Throws(FormatException::class) constructor(val tag: Tag) {
                         Grove.e { "First Index: $firstBlockIndex, last index: $lastBlockIndex, sector block index $sectorBlockIndex, sector Index: $sectorIndex" }
                         if (sectorBlockIndex == 0) continue //Skip header & ID
                         if (sectorBlockIndex == 1 && override) { //Only write ID, seed and game if override
-                            val mergeString = tagInfo.characterId + tagInfo.seedId + tagInfo.gameId
+                            val mergeString = tagInfo.characterId + tagInfo.gameId + tagInfo.seedId
                             mifareClassic.writeBlock(sectorBlockIndex, mergeString.toByteArray())
                         }
                         if (sectorBlockIndex == 2) {
